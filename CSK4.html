@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSK4 — Elite Hacker AI v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+:root{--green:#00ff41;--green-dim:#00aa2a;--green-glow:rgba(0,255,65,0.12);--red:#ff003c;--cyan:#00e5ff;--yellow:#ffdd00;--bg:#030a03;--bg2:#050f05;--panel:#071007;--border:#1a3a1a;--text:#b0ffb0;--dim:#3a5a3a;--dim2:#2a4a2a;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--green);font-family:'Share Tech Mono',monospace;display:flex;flex-direction:column;cursor:default;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);pointer-events:none;z-index:9998;}
+#matrix{position:fixed;top:0;left:0;opacity:0.035;z-index:0;pointer-events:none;}
+
+/* BOOT */
+#boot{position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:40px 60px;}
+#boot-text{white-space:pre;line-height:1.9;color:var(--green);font-size:13px;}
+
+/* HEADER */
+.hdr{padding:8px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);z-index:10;flex-shrink:0;}
+.logo{font-family:'Orbitron',monospace;font-weight:900;font-size:20px;color:var(--green);text-shadow:0 0 18px var(--green),0 0 36px var(--green-dim);letter-spacing:4px;animation:flicker 5s infinite;}
+@keyframes flicker{0%,94%,100%{opacity:1}95%{opacity:.6}96%{opacity:1}97%{opacity:.4}98%{opacity:1}}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.status-pill{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);padding:3px 8px;border:1px solid var(--border);}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hdr-btn{background:none;border:1px solid var(--border);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 10px;cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.hdr-btn:hover{color:var(--green);border-color:var(--green-dim);background:var(--green-glow);}
+
+/* APP */
+.app{display:flex;flex:1;overflow:hidden;position:relative;z-index:10;}
+
+/* SIDEBAR */
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .3s;}
+.sidebar.collapsed{width:0 !important;overflow:hidden;}
+.sb-head{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.sb-head-title{font-size:9px;color:var(--dim);letter-spacing:3px;}
+.new-chat-btn{background:none;border:1px solid var(--green-dim);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 8px;cursor:pointer;transition:all .2s;}
+.new-chat-btn:hover{background:var(--green-glow);}
+.search-wrap{padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.search-input{width:100%;background:#010a01;border:1px solid var(--border);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:11px;padding:5px 9px;outline:none;}
+.search-input::placeholder{color:var(--dim);}
+.search-input:focus{border-color:var(--green-dim);}
+.sessions-list{flex:1;overflow-y:auto;padding:6px 0;}
+.sessions-list::-webkit-scrollbar{width:3px;}
+.sessions-list::-webkit-scrollbar-thumb{background:var(--border);}
+.session-item{padding:9px 12px;cursor:pointer;border-left:2px solid transparent;transition:all .15s;display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.session-item:hover{background:var(--green-glow);border-left-color:var(--green-dim);}
+.session-item.active{background:var(--green-glow);border-left-color:var(--green);}
+.session-name{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+.session-item.active .session-name{color:var(--green);}
+.session-meta{font-size:9px;color:var(--dim2);white-space:nowrap;}
+.session-del{background:none;border:none;color:var(--dim2);cursor:pointer;font-size:11px;padding:0 2px;flex-shrink:0;}
+.session-del:hover{color:var(--red);}
+.sb-modes{border-top:1px solid var(--border);padding:8px 0;flex-shrink:0;}
+.sb-mode-title{font-size:9px;color:var(--dim);padding:4px 12px;letter-spacing:2px;}
+.sb-btn{padding:8px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);cursor:pointer;border:none;background:none;text-align:left;width:100%;border-left:2px solid transparent;transition:all .15s;letter-spacing:.5px;}
+.sb-btn::before{content:'> ';color:var(--dim2);}
+.sb-btn:hover,.sb-btn.active{color:var(--green);background:var(--green-glow);border-left-color:var(--green);}
+
+/* CHAT */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.term-bar{background:#060f06;border-bottom:1px solid var(--border);padding:5px 14px;font-size:10px;color:var(--dim);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.term-bar .g{color:var(--green);}
+.term-bar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.token-badge{font-size:9px;color:var(--dim);border:1px solid var(--dim2);padding:2px 6px;}
+.term-icon-btn{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:2px 6px;transition:color .15s;font-family:'Share Tech Mono',monospace;}
+.term-icon-btn:hover{color:var(--green);}
+
+/* MESSAGES */
+.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px;}
+.messages::-webkit-scrollbar{width:4px;}
+.messages::-webkit-scrollbar-thumb{background:var(--border);}
+.msg{display:flex;flex-direction:column;gap:4px;animation:msgIn .25s ease;max-width:88%;}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{align-self:flex-end;align-items:flex-end;}
+.msg.ai{align-self:flex-start;align-items:flex-start;}
+.msg-meta{display:flex;align-items:center;gap:8px;}
+.msg-label{font-size:9px;letter-spacing:2px;padding:0 3px;}
+.msg.ai .msg-label{color:var(--green-dim);}
+.msg.user .msg-label{color:var(--cyan);opacity:.6;}
+.msg-time{font-size:9px;color:var(--dim2);}
+.msg-bubble{padding:11px 14px;border-radius:2px;font-size:12.5px;line-height:1.75;word-break:break-word;}
+.msg.ai .msg-bubble{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--green);color:var(--text);box-shadow:0 0 16px rgba(0,255,65,0.04);}
+.msg.user .msg-bubble{background:#040c12;border:1px solid #0a2535;border-right:3px solid var(--cyan);color:#a0ddf0;}
+.msg-actions{display:flex;gap:4px;margin-top:3px;opacity:0;transition:opacity .2s;}
+.msg:hover .msg-actions{opacity:1;}
+.msg-act-btn{background:none;border:1px solid var(--border);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;transition:all .15s;}
+.msg-act-btn:hover{color:var(--green);border-color:var(--green-dim);}
+
+/* CODE */
+.code-wrap{position:relative;margin:8px 0;}
+.code-lang{font-size:9px;color:var(--dim);padding:4px 12px;background:#010a01;border:1px solid #0a200a;border-bottom:none;letter-spacing:2px;}
+.code-copy-btn{position:absolute;top:0;right:0;background:#010a01;border:none;border-left:1px solid #0a200a;color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 10px;cursor:pointer;transition:all .15s;}
+.code-copy-btn:hover{color:var(--green);}
+.msg-bubble pre{background:#010a01;border:1px solid #0a200a;padding:12px 14px;font-family:'Share Tech Mono',monospace;font-size:11.5px;color:var(--green);overflow-x:auto;white-space:pre-wrap;word-break:break-all;}
+code.inline-code{background:#010a01;border:1px solid #0a200a;padding:1px 5px;font-size:11px;color:var(--cyan);font-family:'Share Tech Mono',monospace;}
+.msg-bubble strong{color:var(--green);}
+.msg-bubble em{color:var(--yellow);}
+.msg-image{max-width:260px;max-height:180px;border:1px solid var(--border);margin-bottom:6px;display:block;}
+
+/* TYPING */
+.typing-row{padding:0 20px 6px;display:none;align-items:center;gap:8px;font-size:10px;color:var(--green-dim);flex-shrink:0;}
+.typing-row.show{display:flex;}
+.tdots span{width:5px;height:5px;background:var(--green-dim);border-radius:50%;display:inline-block;animation:td 1.2s infinite;}
+.tdots span:nth-child(2){animation-delay:.2s;}.tdots span:nth-child(3){animation-delay:.4s;}
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+
+/* FILE */
+.file-zone{border:1px dashed var(--dim2);margin:0 16px 6px;padding:8px 14px;text-align:center;font-size:10px;color:var(--dim);cursor:pointer;transition:all .25s;flex-shrink:0;}
+.file-zone:hover,.file-zone.drag{border-color:var(--green-dim);color:var(--green);background:var(--green-glow);}
+#fileInput,#imgInput{display:none;}
+.file-preview{margin:0 16px 6px;padding:6px 12px;background:#020c02;border:1px solid var(--border);font-size:10px;color:var(--green-dim);display:none;align-items:center;justify-content:space-between;flex-shrink:0;}
+.file-preview.show{display:flex;}
+.fclear{cursor:pointer;color:var(--red);background:none;border:none;font-family:'Share Tech Mono',monospace;font-size:11px;}
+
+/* INPUT */
+.input-area{padding:10px 16px 12px;border-top:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;gap:7px;flex-shrink:0;}
+.input-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.tool-btn{background:none;border:1px solid var(--border);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 8px;cursor:pointer;letter-spacing:.5px;transition:all .15s;}
+.tool-btn:hover,.tool-btn.on{color:var(--green);border-color:var(--green-dim);background:var(--green-glow);}
+.input-row{display:flex;gap:8px;align-items:flex-end;}
+.prompt-sym{color:var(--green);font-size:14px;padding-bottom:11px;flex-shrink:0;text-shadow:0 0 8px var(--green);}
+.ibox{flex:1;background:#010a01;border:1px solid var(--border);border-radius:2px;color:var(--green);font-family:'Share Tech Mono',monospace;font-size:12.5px;padding:9px 12px;resize:none;outline:none;min-height:42px;max-height:140px;line-height:1.5;transition:border-color .2s,box-shadow .2s;}
+.ibox:focus{border-color:var(--green-dim);box-shadow:0 0 12px rgba(0,255,65,.1);}
+.ibox::placeholder{color:var(--dim);}
+.send-btn{background:none;border:1px solid var(--green-dim);color:var(--green);font-family:'Orbitron',monospace;font-size:10px;padding:9px 16px;cursor:pointer;letter-spacing:2px;height:42px;flex-shrink:0;transition:all .2s;}
+.send-btn:hover:not(:disabled){background:var(--green-glow);box-shadow:0 0 14px rgba(0,255,65,.25);}
+.send-btn:disabled{opacity:.3;cursor:not-allowed;}
+
+/* SETTINGS */
+.settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;}
+.settings-overlay.show{display:flex;}
+.settings-box{background:var(--bg2);border:1px solid var(--border);width:420px;max-width:95vw;max-height:80vh;overflow-y:auto;}
+.settings-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.settings-title{font-family:'Orbitron',monospace;font-size:13px;color:var(--green);letter-spacing:2px;}
+.settings-close{background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;}
+.settings-close:hover{color:var(--red);}
+.settings-body{padding:18px;}
+.sfield{margin-bottom:16px;}
+.sfield label{display:block;font-size:10px;color:var(--dim);letter-spacing:2px;margin-bottom:6px;}
+.sfield input,.sfield textarea{width:100%;background:#010a01;border:1px solid var(--border);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:12px;padding:7px 10px;outline:none;}
+.sfield input:focus,.sfield textarea:focus{border-color:var(--green-dim);}
+.sfield textarea{resize:vertical;min-height:70px;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--dim2);}
+.toggle-label{font-size:11px;color:var(--text);}
+.tog{width:36px;height:18px;background:var(--dim2);border:1px solid var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.tog.on{background:var(--green-dim);}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;transition:left .2s;}
+.tog.on::after{left:20px;}
+.save-btn{width:100%;background:none;border:1px solid var(--green-dim);color:var(--green);font-family:'Orbitron',monospace;font-size:11px;padding:10px;cursor:pointer;letter-spacing:2px;margin-top:12px;transition:all .2s;}
+.save-btn:hover{background:var(--green-glow);}
+
+/* EXPORT */
+.ctx-menu{position:fixed;background:var(--bg2);border:1px solid var(--border);z-index:500;display:none;flex-direction:column;min-width:160px;}
+.ctx-menu.show{display:flex;}
+.ctx-item{padding:8px 14px;font-size:11px;color:var(--dim);cursor:pointer;border-bottom:1px solid var(--dim2);transition:all .15s;}
+.ctx-item:hover{color:var(--green);background:var(--green-glow);}
+.ctx-item:last-child{border-bottom:none;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--green-dim);color:var(--green);font-size:11px;padding:8px 16px;z-index:9000;opacity:0;transition:opacity .3s;pointer-events:none;}
+.toast.show{opacity:1;}
+
+/* EMPTY */
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--dim);}
+.empty-logo{font-family:'Orbitron',monospace;font-size:44px;color:var(--dim2);letter-spacing:6px;}
+.empty-sub{font-size:10px;letter-spacing:3px;}
+.stream-cur{display:inline-block;width:8px;height:13px;background:var(--green);animation:blink .7s step-end infinite;vertical-align:text-bottom;margin-left:2px;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-thumb{background:var(--border);}
+@media(max-width:600px){.sidebar{width:0 !important;}.logo{font-size:16px;}}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+
+<div id="boot"><div id="boot-text"></div></div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="hdr-btn" onclick="toggleSidebar()">☰</button>
+    <div class="logo">CSK4</div>
+    <span style="font-size:9px;color:var(--dim);font-family:'Orbitron',monospace;">v2.0</span>
+  </div>
+  <div class="hdr-right">
+    <div class="status-pill"><span class="sdot"></span>ONLINE</div>
+    <button class="hdr-btn" onclick="openSettings()">⚙ SETTINGS</button>
+    <button class="hdr-btn" onclick="showExportMenu(event)">↓ EXPORT</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <span class="sb-head-title">SESSIONS</span>
+      <button class="new-chat-btn" onclick="newSession()">+ NEW</button>
+    </div>
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" placeholder="/ search sessions..." oninput="filterSessions(this.value)">
+    </div>
+    <div class="sessions-list" id="sessionsList"></div>
+    <div class="sb-modes">
+      <div class="sb-mode-title">MODULES</div>
+      <button class="sb-btn active" id="btn-chat" onclick="setMode('chat',this)">CHAT</button>
+      <button class="sb-btn" id="btn-code" onclick="setMode('code',this)">CODE REVIEW</button>
+      <button class="sb-btn" id="btn-pentest" onclick="setMode('pentest',this)">PENTEST</button>
+      <button class="sb-btn" id="btn-network" onclick="setMode('network',this)">NETWORK SEC</button>
+      <button class="sb-btn" id="btn-tool" onclick="setMode('tool',this)">TOOL BUILDER</button>
+      <button class="sb-btn" id="btn-fix" onclick="setMode('fix',this)">BUG FIXER</button>
+      <button class="sb-btn" id="btn-exploit" onclick="setMode('exploit',this)">EXPLOIT DEV</button>
+      <button class="sb-btn" id="btn-osint" onclick="setMode('osint',this)">OSINT</button>
+    </div>
+  </div>
+
+  <!-- CHAT AREA -->
+  <div class="chat-area">
+    <div class="term-bar">
+      <span class="g">root@CSK4</span>:~/<span class="g" id="termPath">chat</span>$
+      <span id="sessionTitle" style="color:var(--dim);font-size:10px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;"></span>
+      <div class="term-bar-right">
+        <span class="token-badge" id="tokenBadge">~0 tokens</span>
+        <button class="term-icon-btn" onclick="clearCurrentSession()">⌫ CLR</button>
+        <button class="term-icon-btn" onclick="scrollBottom()">↓ END</button>
+      </div>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="typing-row" id="typing">
+      <div class="tdots"><span></span><span></span><span></span></div>
+      <span>CSK4 processing...</span>
+    </div>
+    <div class="file-zone" id="fileZone">
+      <input type="file" id="fileInput" accept="*/*" onchange="handleFile(event)">
+      <input type="file" id="imgInput" accept="image/*" onchange="handleImage(event)">
+      ⬆ DROP ANY FILE or click — code, scripts, images, docs — all accepted
+    </div>
+    <div class="file-preview" id="filePreview">
+      <span id="fileName">—</span>
+      <button class="fclear" onclick="clearFile()">✕ REMOVE</button>
+    </div>
+    <div class="input-area">
+      <div class="input-toolbar">
+        <button class="tool-btn" id="wsBtn" onclick="toggleWebSearch()">🌐 WEB</button>
+        <button class="tool-btn" onclick="document.getElementById('imgInput').click()">🖼 IMG</button>
+        <button class="tool-btn" onclick="document.getElementById('fileInput').click()">📎 FILE</button>
+        <button class="tool-btn" onclick="insertSnippet()">{ } CODE</button>
+        <button class="tool-btn" onclick="newSession()">+ NEW CHAT</button>
+        <span style="margin-left:auto;font-size:9px;color:var(--dim);" id="modeTag">[CHAT]</span>
+      </div>
+      <div class="input-row">
+        <span class="prompt-sym">~#</span>
+        <textarea class="ibox" id="inputBox" placeholder="Enter command... (Enter=send, Shift+Enter=newline)" rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">EXEC ▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-box">
+    <div class="settings-hdr">
+      <span class="settings-title">⚙ CSK4 SETTINGS</span>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="sfield"><label>OPERATOR NAME</label><input id="cfg-name" type="text" placeholder="e.g. H4X0R" value="Operator"></div>
+      <div class="sfield"><label>EXTRA SYSTEM INSTRUCTIONS</label><textarea id="cfg-system" placeholder="Additional instructions appended to all modes..."></textarea></div>
+      <div class="sfield"><label>MAX TOKENS PER RESPONSE</label><input id="cfg-tokens" type="number" value="2000" min="500" max="4096" step="100"></div>
+      <div class="toggle-row"><span class="toggle-label">Web Search toggle (manual)</span><div class="tog" id="tog-ws" onclick="this.classList.toggle('on')"></div></div>
+      <div class="toggle-row"><span class="toggle-label">Streaming responses (typewriter)</span><div class="tog on" id="tog-stream" onclick="this.classList.toggle('on')"></div></div>
+      <div class="toggle-row"><span class="toggle-label">Show token counter</span><div class="tog on" id="tog-tokens" onclick="this.classList.toggle('on')"></div></div>
+      <div class="toggle-row"><span class="toggle-label">Matrix rain background</span><div class="tog on" id="tog-matrix" onclick="this.classList.toggle('on');toggleMatrix()"></div></div>
+      <button class="save-btn" onclick="saveSettings()">▶ SAVE SETTINGS</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MENU -->
+<div class="ctx-menu" id="exportMenu">
+  <div class="ctx-item" onclick="exportMD()">📄 Markdown (.md)</div>
+  <div class="ctx-item" onclick="exportTXT()">📝 Plain Text (.txt)</div>
+  <div class="ctx-item" onclick="exportJSON()">📦 JSON (.json)</div>
+  <div class="ctx-item" onclick="copyAllChat()">📋 Copy to clipboard</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ MATRIX ═══════════════════════════════════════
+const canvas=document.getElementById('matrix');
+const ctx2=canvas.getContext('2d');
+let matrixOn=true;
+function resizeMatrix(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+resizeMatrix();window.addEventListener('resize',()=>{resizeMatrix();initDrops();});
+let drops=[];
+function initDrops(){drops=Array(Math.floor(canvas.width/16)).fill(1);}
+initDrops();
+setInterval(()=>{
+  if(!matrixOn)return;
+  ctx2.fillStyle='rgba(0,0,0,0.05)';ctx2.fillRect(0,0,canvas.width,canvas.height);
+  ctx2.fillStyle='#00ff41';ctx2.font='14px Share Tech Mono';
+  drops.forEach((y,i)=>{
+    ctx2.fillText(String.fromCharCode(0x30A0+Math.random()*96),i*16,y*16);
+    if(y*16>canvas.height&&Math.random()>.975)drops[i]=0;
+    drops[i]++;
+  });
+},50);
+function toggleMatrix(){matrixOn=!matrixOn;if(!matrixOn)ctx2.clearRect(0,0,canvas.width,canvas.height);}
+
+// ═══ BOOT ══════════════════════════════════════════
+const BOOT_LINES=[
+  "  ██████╗███████╗██╗  ██╗██╗  ██╗",
+  " ██╔════╝██╔════╝██║ ██╔╝██║  ██║",
+  " ██║     ███████╗█████╔╝ ███████║",
+  " ██║     ╚════██║██╔═██╗ ╚════██║",
+  " ╚██████╗███████║██║  ██╗     ██║",
+  "  ╚═════╝╚══════╝╚═╝  ╚═╝     ╚═╝  v2.0",
+  "",
+  "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+  "[INIT]  CSK4 Elite AI System booting...",
+  "[OK]    Kali Linux kernel loaded",
+  "[OK]    BlackArch modules: active",
+  "[OK]    Crypto engine: AES-256",
+  "[OK]    Network interfaces: eth0 wlan0mon",
+  "[OK]    Exploit framework: armed",
+  "[OK]    Code analyzer: ready",
+  "[OK]    Bug detection engine: online",
+  "[OK]    OSINT modules: loaded",
+  "[OK]    Tool builder: ready",
+  "[OK]    AI core: claude-sonnet-4 linked",
+  "[OK]    LocalStorage: session memory on",
+  "[OK]    Streaming engine: active",
+  "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+  "ACCESS GRANTED. Welcome back, Operator.",
+  "CSK4 READY ██████████████████████ 100%",
+];
+let bIdx=0;
+const bootEl=document.getElementById('boot-text');
+function bootStep(){
+  if(bIdx<BOOT_LINES.length){bootEl.textContent+=BOOT_LINES[bIdx]+'\n';bIdx++;setTimeout(bootStep,bIdx>7?55:25);}
+  else setTimeout(()=>{const b=document.getElementById('boot');b.style.transition='opacity .5s';b.style.opacity='0';setTimeout(()=>{b.remove();initApp();},500);},500);
+}
+bootStep();
+
+// ═══ CONFIG ════════════════════════════════════════
+let cfg={name:'Operator',system:'',tokens:2000,webSearch:false,stream:true,showTokens:true};
+function loadCfg(){
+  try{const s=localStorage.getItem('csk4_cfg');if(s)cfg={...cfg,...JSON.parse(s)};}catch(e){}
+  document.getElementById('cfg-name').value=cfg.name;
+  document.getElementById('cfg-system').value=cfg.system;
+  document.getElementById('cfg-tokens').value=cfg.tokens;
+  if(cfg.webSearch)document.getElementById('tog-ws').classList.add('on');
+  if(!cfg.stream)document.getElementById('tog-stream').classList.remove('on');
+  if(!cfg.showTokens)document.getElementById('tog-tokens').classList.remove('on');
+}
+function saveSettings(){
+  cfg.name=document.getElementById('cfg-name').value||'Operator';
+  cfg.system=document.getElementById('cfg-system').value;
+  cfg.tokens=parseInt(document.getElementById('cfg-tokens').value)||2000;
+  cfg.webSearch=document.getElementById('tog-ws').classList.contains('on');
+  cfg.stream=document.getElementById('tog-stream').classList.contains('on');
+  cfg.showTokens=document.getElementById('tog-tokens').classList.contains('on');
+  localStorage.setItem('csk4_cfg',JSON.stringify(cfg));
+  closeSettings();toast('Settings saved ✓');
+}
+function openSettings(){document.getElementById('settingsOverlay').classList.add('show');}
+function closeSettings(){document.getElementById('settingsOverlay').classList.remove('show');}
+
+// ═══ SESSIONS ══════════════════════════════════════
+let sessions={};
+let activeId=null;
+let currentMode='chat';
+let webSearchOn=false;
+let totalTokens=0;
+const MODES={
+  chat:{p:'chat',n:'CHAT'},code:{p:'code_review',n:'CODE REVIEW'},
+  pentest:{p:'pentest',n:'PENTEST'},network:{p:'network_sec',n:'NETWORK SEC'},
+  tool:{p:'tool_builder',n:'TOOL BUILDER'},fix:{p:'bug_fixer',n:'BUG FIXER'},
+  exploit:{p:'exploit_dev',n:'EXPLOIT DEV'},osint:{p:'osint',n:'OSINT'}
+};
+function saveSess(){try{localStorage.setItem('csk4_sessions',JSON.stringify(sessions));}catch(e){toast('Storage full!');}}
+function loadSess(){try{const s=localStorage.getItem('csk4_sessions');if(s)sessions=JSON.parse(s);}catch(e){sessions={};}}
+function genId(){return 'ses_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);}
+
+function newSession(){
+  const id=genId();
+  sessions[id]={id,name:'New Session',mode:currentMode,history:[],messages:[],created:Date.now()};
+  saveSess();switchSession(id);renderSessions();
+}
+function switchSession(id){
+  activeId=id;
+  const ses=sessions[id];
+  currentMode=ses.mode||'chat';
+  document.getElementById('termPath').textContent=MODES[currentMode].p;
+  document.getElementById('sessionTitle').textContent=ses.name;
+  document.getElementById('modeTag').textContent='['+MODES[currentMode].n+']';
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
+  const b=document.getElementById('btn-'+currentMode);if(b)b.classList.add('active');
+  const msgs=document.getElementById('messages');msgs.innerHTML='';
+  if(ses.messages.length===0)showEmpty();
+  else ses.messages.forEach(m=>renderMsg(m.role,m.content,m.time,false,m.img||null));
+  updateTokens();renderSessions();scrollBottom();
+}
+function delSession(id,e){
+  e.stopPropagation();
+  if(Object.keys(sessions).length===1){toast('Cannot delete last session');return;}
+  if(!confirm('Delete session?'))return;
+  delete sessions[id];saveSess();
+  if(activeId===id){const ids=Object.keys(sessions);switchSession(ids[ids.length-1]);}
+  renderSessions();
+}
+function renameSession(id,e){
+  e.stopPropagation();
+  const n=prompt('Session name:',sessions[id].name);
+  if(n&&n.trim()){sessions[id].name=n.trim();saveSess();renderSessions();if(activeId===id)document.getElementById('sessionTitle').textContent=sessions[id].name;}
+}
+function renderSessions(filter=''){
+  const el=document.getElementById('sessionsList');el.innerHTML='';
+  Object.values(sessions).sort((a,b)=>b.created-a.created).forEach(ses=>{
+    if(filter&&!ses.name.toLowerCase().includes(filter.toLowerCase()))return;
+    const d=document.createElement('div');d.className='session-item'+(ses.id===activeId?' active':'');
+    d.onclick=()=>switchSession(ses.id);d.ondblclick=(e)=>renameSession(ses.id,e);
+    d.innerHTML=`<span class="session-name">> ${ses.name}</span><span class="session-meta">${MODES[ses.mode]?.n||ses.mode}</span><button class="session-del" onclick="delSession('${ses.id}',event)" title="Delete">✕</button>`;
+    el.appendChild(d);
+  });
+}
+function filterSessions(v){renderSessions(v);}
+function clearCurrentSession(){
+  if(!activeId)return;
+  sessions[activeId].history=[];sessions[activeId].messages=[];saveSess();
+  document.getElementById('messages').innerHTML='';totalTokens=0;updateTokens();showEmpty();toast('Cleared ✓');
+}
+
+// ═══ MODES ═════════════════════════════════════════
+function setMode(m,btn){
+  currentMode=m;
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('termPath').textContent=MODES[m].p;
+  document.getElementById('modeTag').textContent='['+MODES[m].n+']';
+  if(activeId){sessions[activeId].mode=m;saveSess();}
+  toast('Mode: '+MODES[m].n);
+}
+
+// ═══ SYSTEM PROMPTS ════════════════════════════════
+const SYS={
+  chat:`You are CSK4 v2, elite AI assistant for professional ethical hacker/penetration tester named {N}. Expert in Python (primary) + all languages, pentest, network security, Kali Linux, BlackArch, exploit dev, OSINT, CTF. PERSONALITY: Professional, serious, hacker-style. Direct, efficient, no fluff. Terminal aesthetic. Use [CSK4]~# prefix on key responses. Format code in markdown. Respond in same language user uses (Urdu/Roman Urdu/English mix ok). {X}`,
+  code:`You are CSK4 in CODE REVIEW mode for expert hacker {N}. Thoroughly analyze for: bugs (logic errors, off-by-one, null refs), security vulns (SQLi, XSS, RCE, buffer overflow, race conditions, insecure deserialization, SSRF, etc), bad practices, performance. Format each finding: [SEVERITY: CRITICAL/HIGH/MED/LOW] — issue — line — fix. Then provide complete fixed code. Be exhaustive. {X}`,
+  pentest:`You are CSK4 in PENTEST mode for certified ethical hacker {N}. All targets are authorized. Detail: recon (passive/active), scanning (nmap, masscan), enumeration, exploitation, post-exploit, lateral movement, persistence, pivoting, reporting. Tools: Metasploit, Burp, SQLmap, Hydra, John, Hashcat, Mimikatz, BloodHound, CrackMapExec. {X}`,
+  network:`You are CSK4 in NETWORK SECURITY mode for {N}. Expert: TCP/IP deep, protocol analysis, Wireshark/tcpdump, Scapy packet crafting, IDS/IPS bypass, firewall evasion, VPN/proxy/tunnel, WiFi attacks (WPA2, PMKID, Evil Twin, KARMA), network forensics, traffic analysis. {X}`,
+  tool:`You are CSK4 TOOL BUILDER for {N}. Create complete production-ready tools. Python primary, all languages. Kali/BlackArch target. Requirements: full argparse CLI, colored terminal output (colorama/rich), progress bars, error handling, logging, output saving (JSON/CSV/TXT), threading where useful, banner/version. NO placeholders. Fully runnable code only. {X}`,
+  fix:`You are CSK4 BUG FIXER for expert {N}. For any code: 1) List ALL bugs with line numbers and [SEVERITY] 2) Explain root cause of each 3) Show fully corrected working code 4) Summarize all changes. Be comprehensive — find hidden bugs too. {X}`,
+  exploit:`You are CSK4 EXPLOIT DEV assistant for certified security researcher {N}. Help with: stack/heap buffer overflows, ROP chains, shellcode writing, format string bugs, use-after-free, kernel exploits (LPE), CVE PoC development, bypass techniques (ASLR, DEP/NX, stack canaries, CFI). All for authorized research/CTF. {X}`,
+  osint:`You are CSK4 OSINT mode for ethical investigator {N}. Expert: passive recon, Shodan/Censys/ZoomEye dorks, Google/Bing dorks, theHarvester, Maltego, Recon-ng, WHOIS/RDAP, DNS enumeration (subfinder, amass, dnsx), social media OSINT (Sherlock, Maigret), dark web (legal), FOCA metadata, image OSINT, company recon. {X}`
+};
+function getSys(){return SYS[currentMode].replace('{N}',cfg.name).replace('{X}',cfg.system);}
+
+// ═══ FILE/IMAGE ════════════════════════════════════
+let aFile=null,aContent='',aImg=null,aImgB64='';
+function handleFile(e){const f=e.target.files[0];if(!f)return;aFile=f;aImg=null;aImgB64='';document.getElementById('fileName').textContent=`📎 ${f.name} (${(f.size/1024).toFixed(1)}KB)`;document.getElementById('filePreview').classList.add('show');const r=new FileReader();r.onload=ev=>{aContent=ev.target.result;};r.readAsText(f);}
+function handleImage(e){const f=e.target.files[0];if(!f)return;aImg=f;aFile=f;aContent='';document.getElementById('fileName').textContent=`🖼 ${f.name}`;document.getElementById('filePreview').classList.add('show');const r=new FileReader();r.onload=ev=>{aImgB64=ev.target.result.split(',')[1];};r.readAsDataURL(f);}
+function clearFile(){aFile=aImg=null;aContent=aImgB64='';document.getElementById('fileInput').value='';document.getElementById('imgInput').value='';document.getElementById('filePreview').classList.remove('show');}
+const fz=document.getElementById('fileZone');
+fz.addEventListener('click',()=>document.getElementById('fileInput').click());
+fz.addEventListener('dragover',e=>{e.preventDefault();fz.classList.add('drag');});
+fz.addEventListener('dragleave',()=>fz.classList.remove('drag'));
+fz.addEventListener('drop',e=>{
+  e.preventDefault();fz.classList.remove('drag');const f=e.dataTransfer.files[0];if(!f)return;
+  if(f.type.startsWith('image/')){aImg=f;aFile=f;document.getElementById('fileName').textContent=`🖼 ${f.name}`;document.getElementById('filePreview').classList.add('show');const r=new FileReader();r.onload=ev=>{aImgB64=ev.target.result.split(',')[1];};r.readAsDataURL(f);}
+  else{aFile=f;document.getElementById('fileName').textContent=`📎 ${f.name} (${(f.size/1024).toFixed(1)}KB)`;document.getElementById('filePreview').classList.add('show');const r=new FileReader();r.onload=ev=>{aContent=ev.target.result;};r.readAsText(f);}
+});
+
+// ═══ RENDER ════════════════════════════════════════
+function showEmpty(){const m=document.getElementById('messages');const e=document.createElement('div');e.className='empty-state';e.innerHTML=`<div class="empty-logo">CSK4</div><div class="empty-sub">READY — type command or drop file</div>`;m.appendChild(e);}
+
+function renderMsg(role,text,time,save=true,imgB64=null){
+  const msgs=document.getElementById('messages');
+  const emp=msgs.querySelector('.empty-state');if(emp)emp.remove();
+  const div=document.createElement('div');div.className='msg '+role;
+  const meta=document.createElement('div');meta.className='msg-meta';
+  const lbl=document.createElement('span');lbl.className='msg-label';lbl.textContent=role==='ai'?'[CSK4]':'['+cfg.name+']';
+  const tm=document.createElement('span');tm.className='msg-time';tm.textContent=time||new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  meta.appendChild(lbl);meta.appendChild(tm);
+  const bubble=document.createElement('div');bubble.className='msg-bubble';
+  if(imgB64){const img=document.createElement('img');img.className='msg-image';img.src='data:image/jpeg;base64,'+imgB64;bubble.appendChild(img);}
+  parseMsgText(text,bubble);
+  const acts=document.createElement('div');acts.className='msg-actions';
+  const cp=document.createElement('button');cp.className='msg-act-btn';cp.textContent='📋 COPY';cp.onclick=()=>{navigator.clipboard.writeText(text);toast('Copied ✓');};
+  acts.appendChild(cp);
+  if(role==='ai'){const rg=document.createElement('button');rg.className='msg-act-btn';rg.textContent='🔄 REGEN';rg.onclick=()=>regenerate();acts.appendChild(rg);}
+  div.appendChild(meta);div.appendChild(bubble);div.appendChild(acts);
+  msgs.appendChild(div);scrollBottom();
+  if(save&&activeId){sessions[activeId].messages.push({role,content:text,time:tm.textContent,img:imgB64||null});saveSess();}
+  return bubble;
+}
+
+function parseMsgText(text,container){
+  const parts=text.split(/(```[\w]*\n?[\s\S]*?```)/g);
+  parts.forEach(p=>{
+    if(p.startsWith('```')){
+      const lm=p.match(/^```(\w*)/);const lang=lm?lm[1]:'';
+      const code=p.replace(/^```\w*\n?/,'').replace(/```$/,'').trim();
+      const wrap=document.createElement('div');wrap.className='code-wrap';
+      if(lang){const lh=document.createElement('div');lh.className='code-lang';lh.textContent=lang.toUpperCase();wrap.appendChild(lh);}
+      const pre=document.createElement('pre');pre.textContent=code;wrap.appendChild(pre);
+      const cp=document.createElement('button');cp.className='code-copy-btn';cp.textContent='COPY';
+      cp.onclick=()=>{navigator.clipboard.writeText(code);cp.textContent='✓ DONE';setTimeout(()=>cp.textContent='COPY',1500);};
+      wrap.appendChild(cp);container.appendChild(wrap);
+    } else if(p){
+      const sp=document.createElement('span');
+      sp.innerHTML=p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/`([^`\n]+)`/g,'<code class="inline-code">$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*([^*\n]+)\*/g,'<em>$1</em>')
+        .replace(/\n/g,'<br>');
+      container.appendChild(sp);
+    }
+  });
+}
+
+// ═══ STREAMING ═════════════════════════════════════
+async function doStream(messages,onChunk,onDone,onErr){
+  try{
+    const body={model:'claude-sonnet-4-20250514',max_tokens:cfg.tokens,system:getSys(),messages,stream:true};
+    if(webSearchOn)body.tools=[{type:'web_search_20250305',name:'web_search'}];
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const reader=res.body.getReader();const dec=new TextDecoder();let full='';
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      const lines=dec.decode(value).split('\n');
+      for(const line of lines){
+        if(line.startsWith('data: ')){
+          try{const d=JSON.parse(line.slice(6));if(d.type==='content_block_delta'&&d.delta?.text){full+=d.delta.text;onChunk(d.delta.text,full);}}catch(e){}
+        }
+      }
+    }
+    onDone(full);
+  }catch(e){onErr(e);}
+}
+
+// ═══ SEND ══════════════════════════════════════════
+async function sendMessage(){
+  const box=document.getElementById('inputBox');
+  const txt=box.value.trim();
+  if(!txt&&!aFile)return;
+  if(!activeId)newSession();
+  const ses=sessions[activeId];
+  const now=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  let userDisp=txt,apiContent=txt,imgForMsg=null;
+
+  if(aImg&&aImgB64){
+    imgForMsg=aImgB64;userDisp=txt||`[Image: ${aImg.name}]`;
+    apiContent=[{type:'image',source:{type:'base64',media_type:aImg.type||'image/jpeg',data:aImgB64}},{type:'text',text:txt||'Analyze from security perspective. Check for sensitive data, vulnerabilities, credentials, network info.'}];
+    clearFile();
+  } else if(aFile&&aContent){
+    userDisp=`📎 ${aFile.name}\n${txt||'[File check request]'}`;
+    apiContent=`File: ${aFile.name}\n\`\`\`\n${aContent.substring(0,12000)}\n\`\`\`\n\n${txt||'Full security analysis: all bugs, vulnerabilities, errors. Fix the code completely.'}`;
+    clearFile();
+  }
+
+  if(ses.messages.length===0){
+    ses.name=(typeof userDisp==='string'?userDisp:'Upload').replace(/\n.*/,'').slice(0,35)||'Session';
+    document.getElementById('sessionTitle').textContent=ses.name;saveSess();renderSessions();
+  }
+
+  renderMsg('user',typeof userDisp==='string'?userDisp:'[Image upload]',now,true,imgForMsg);
+  box.value='';box.style.height='auto';setTyping(true);
+  ses.history.push({role:'user',content:apiContent});
+
+  // create streaming bubble
+  const msgs=document.getElementById('messages');
+  const aDiv=document.createElement('div');aDiv.className='msg ai';
+  const aMeta=document.createElement('div');aMeta.className='msg-meta';
+  const aLbl=document.createElement('span');aLbl.className='msg-label';aLbl.textContent='[CSK4]';
+  const aTm=document.createElement('span');aTm.className='msg-time';aTm.textContent=now;
+  aMeta.appendChild(aLbl);aMeta.appendChild(aTm);
+  const aBubble=document.createElement('div');aBubble.className='msg-bubble';
+  aBubble.innerHTML='<span class="stream-cur"></span>';
+  aDiv.appendChild(aMeta);aDiv.appendChild(aBubble);msgs.appendChild(aDiv);scrollBottom();
+
+  const finish=(full)=>{
+    aBubble.innerHTML='';parseMsgText(full,aBubble);
+    const acts=document.createElement('div');acts.className='msg-actions';
+    const cp=document.createElement('button');cp.className='msg-act-btn';cp.textContent='📋 COPY';cp.onclick=()=>{navigator.clipboard.writeText(full);toast('Copied ✓');};
+    const rg=document.createElement('button');rg.className='msg-act-btn';rg.textContent='🔄 REGEN';rg.onclick=()=>regenerate();
+    acts.appendChild(cp);acts.appendChild(rg);aDiv.appendChild(acts);
+    ses.history.push({role:'assistant',content:full});
+    ses.messages.push({role:'ai',content:full,time:now,img:null});
+    saveSess();setTyping(false);totalTokens+=Math.ceil(full.length/4);updateTokens();scrollBottom();
+  };
+
+  if(cfg.stream){
+    await doStream(ses.history,
+      (_,full)=>{aBubble.innerHTML='';parseMsgText(full+'▊',aBubble);scrollBottom();},
+      finish,
+      (e)=>{aBubble.innerHTML='';parseMsgText(`[ERROR] ${e.message}`,aBubble);setTyping(false);}
+    );
+  } else {
+    try{
+      const body={model:'claude-sonnet-4-20250514',max_tokens:cfg.tokens,system:getSys(),messages:ses.history};
+      if(webSearchOn)body.tools=[{type:'web_search_20250305',name:'web_search'}];
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const data=await res.json();
+      const reply=data.content?data.content.filter(b=>b.type==='text').map(b=>b.text).join(''):'[ERROR] '+(data.error?.message||JSON.stringify(data));
+      finish(reply);
+    }catch(e){aBubble.innerHTML='';parseMsgText(`[ERROR] ${e.message}`,aBubble);setTyping(false);}
+  }
+}
+
+function regenerate(){
+  if(!activeId)return;
+  const ses=sessions[activeId];
+  if(ses.history.length>0&&ses.history[ses.history.length-1].role==='assistant'){ses.history.pop();ses.messages.pop();saveSess();}
+  const msgs=document.getElementById('messages');const bs=msgs.querySelectorAll('.msg.ai');if(bs.length>0)bs[bs.length-1].remove();
+  if(ses.history.length>0&&ses.history[ses.history.length-1].role==='user'){
+    const last=ses.history.pop();ses.messages.pop();saveSess();
+    const c=typeof last.content==='string'?last.content:(last.content[last.content.length-1]?.text||'');
+    document.getElementById('inputBox').value=c;
+    sendMessage();
+  }
+}
+
+// ═══ HELPERS ═══════════════════════════════════════
+function setTyping(v){document.getElementById('typing').classList.toggle('show',v);document.getElementById('sendBtn').disabled=v;}
+function scrollBottom(){const m=document.getElementById('messages');m.scrollTop=m.scrollHeight;}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,140)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}
+function toggleWebSearch(){webSearchOn=!webSearchOn;document.getElementById('wsBtn').classList.toggle('on',webSearchOn);toast('Web search: '+(webSearchOn?'ON 🌐':'OFF'));}
+function updateTokens(){document.getElementById('tokenBadge').textContent=cfg.showTokens?'~'+totalTokens+' tokens':'';}
+function insertSnippet(){const b=document.getElementById('inputBox');const p=b.selectionStart;const s='```python\n\n```';b.value=b.value.slice(0,p)+s+b.value.slice(p);b.focus();b.selectionStart=b.selectionEnd=p+10;autoResize(b);}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+// ═══ EXPORT ════════════════════════════════════════
+function showExportMenu(e){
+  const m=document.getElementById('exportMenu');m.style.top=(e.clientY+6)+'px';m.style.right=(window.innerWidth-e.clientX+4)+'px';
+  m.classList.add('show');setTimeout(()=>document.addEventListener('click',()=>m.classList.remove('show'),{once:true}),50);
+}
+function getMsgs(){return activeId?(sessions[activeId].messages||[]):[]}
+function exportMD(){const md=getMsgs().map(m=>`**${m.role==='ai'?'CSK4':cfg.name}** — ${m.time}\n\n${m.content}`).join('\n\n---\n\n');dl('csk4_chat.md',md,'text/markdown');}
+function exportTXT(){const t=getMsgs().map(m=>`[${m.role==='ai'?'CSK4':cfg.name}] ${m.time}\n${m.content}`).join('\n\n');dl('csk4_chat.txt',t,'text/plain');}
+function exportJSON(){dl('csk4_session.json',JSON.stringify({session:sessions[activeId],exported:new Date().toISOString()},null,2),'application/json');}
+function copyAllChat(){navigator.clipboard.writeText(getMsgs().map(m=>`[${m.role==='ai'?'CSK4':cfg.name}]: ${m.content}`).join('\n\n'));toast('Chat copied ✓');}
+function dl(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
+
+// ═══ INIT ══════════════════════════════════════════
+function initApp(){
+  loadCfg();loadSess();
+  const ids=Object.keys(sessions);
+  if(ids.length>0){switchSession(ids.sort((a,b)=>sessions[b].created-sessions[a].created)[0]);}
+  else{
+    newSession();
+    const welcome=`[CSK4]~# System v2.0 initialized. AsSalam o Alaikum ${cfg.name}!\n\nMain hoon CSK4 — aapka elite hacking AI.\n\n🆕 NEW IN v2:\n• 💾 Full history LocalStorage mein save — close karo page, wapas aao sab milega\n• ⚡ Real-time streaming responses (typewriter effect)\n• 📂 Multiple sessions — left sidebar mein manage karo\n• 🔄 Regenerate any response\n• 📋 Copy buttons har message aur code block par\n• 🖼 Image upload + analysis\n• 🌐 Web search toggle\n• ↓ Export: MD / TXT / JSON\n• ⚙ Settings: name, tokens, streaming, matrix toggle\n• 8 specialized modules: Chat, Code Review, Pentest, Network Sec, Tool Builder, Bug Fixer, Exploit Dev, OSINT\n\nFile drop karo, code paste karo, ya kuch bhi poochho.\nroot@CSK4:~$ _`;
+    renderMsg('ai',welcome,null,true);
+  }
+}
+</script>
+</body>
+</html>
